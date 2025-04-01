@@ -12,9 +12,13 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   List _listaTarefas = [];
 
-  _salvarArquivo() async {
+  _getFile() async {
     final diretorio = await getApplicationDocumentsDirectory();
-    var arquivo = File("${diretorio.path}/dados.json");
+    return File("${diretorio.path}/dados.json");
+  }
+
+  _salvarArquivo() async {
+    var arquivo = await _getFile();
 
     Map<String, dynamic> tarefa = Map();
 
@@ -25,10 +29,28 @@ class _HomeState extends State<Home> {
     String dados = json.encode(
       _listaTarefas,
     ); //converte LIST ou MAP em string Json
-    arquivo.writeAsStringSync(dados);
+    arquivo.writeAsString(dados);
+  }
+
+  _lerArquivo() async {
+    try {
+      final arquivo = await _getFile();
+    } catch (e) {
+      return null;
+    }
   }
 
   @override
+  void initState() {
+    super.initState();
+
+    _lerArquivo().then((dados) {
+      setState(() {
+        _listaTarefas = jsonDecode(dados);
+      });
+    });
+  }
+
   Widget build(BuildContext context) {
     _salvarArquivo();
     return Scaffold(
@@ -70,7 +92,7 @@ class _HomeState extends State<Home> {
               child: ListView.builder(
                 itemCount: _listaTarefas.length,
                 itemBuilder: (context, index) {
-                  return ListTile(title: Text(_listaTarefas[index]));
+                  return ListTile(title: Text(_listaTarefas[index]["titulo"]));
                 },
               ),
             ),
