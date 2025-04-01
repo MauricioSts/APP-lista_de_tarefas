@@ -6,34 +6,51 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
+  List _listaTarefas = ["Ir ao mercado", "Estudar Flutter", "ir ao cinema"];
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("FloatingActionButton")),
-      body: Text("Conteudo"),
-
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      //floatingActionButton: FloatingActionButton(
-      floatingActionButton: FloatingActionButton.extended(
+      appBar: AppBar(
+        title: Text("Lista de tarefas", style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.purple,
-        foregroundColor: Colors.white,
-        elevation: 6,
-        icon: Icon(Icons.add_shopping_cart),
-        label: Text("Adicionar"),
-        /*shape: BeveledRectangleBorder(
-          borderRadius: BorderRadius.circular(50)
-        ),*/
-        //mini: true,
-        /*child: Icon(Icons.add),
-          onPressed: (){
-            print("Resultado: botao pressionado!");
-          }*/
       ),
-      bottomNavigationBar: BottomAppBar(
-        //shape: CircularNotchedRectangle(),
-        child: Row(
-          children: <Widget>[
-            IconButton(onPressed: () {}, icon: Icon(Icons.add)),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (context) {
+              return AlertDialog(
+                title: Text("Adicionar tarefa"),
+                content: TextField(
+                  decoration: InputDecoration(labelText: "digite sua tarefa"),
+                  onChanged: (text) {},
+                ),
+                actions: [
+                  TextButton(onPressed: () {}, child: Text("adicionar")),
+                  TextButton(
+                    child: Text("cancelar"),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+        backgroundColor: Colors.purple,
+        child: Icon(Icons.add, color: Colors.white),
+      ),
+      body: Container(
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                itemCount: _listaTarefas.length,
+                itemBuilder: (context, index) {
+                  return ListTile(title: Text(_listaTarefas[index]));
+                },
+              ),
+            ),
           ],
         ),
       ),
