@@ -12,6 +12,23 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   List _listaTarefas = [];
 
+  TextEditingController _controllerTarefa = TextEditingController();
+
+  _salvarTarefa() {
+    String textoDigitado = _controllerTarefa.text;
+
+    Map<String, dynamic> tarefa = Map();
+
+    tarefa["titulo"] = textoDigitado;
+    tarefa["realizada"] = false;
+    setState(() {
+      _listaTarefas.add(tarefa);
+    });
+
+    _controllerTarefa.text = "";
+    _salvarArquivo();
+  }
+
   _getFile() async {
     final diretorio = await getApplicationDocumentsDirectory();
     return File("${diretorio.path}/dados.json");
@@ -19,12 +36,6 @@ class _HomeState extends State<Home> {
 
   _salvarArquivo() async {
     var arquivo = await _getFile();
-
-    Map<String, dynamic> tarefa = Map();
-
-    tarefa["titulo"] = "ir ao mercado";
-    tarefa["realizada"] = false;
-    _listaTarefas.add(tarefa);
 
     String dados = json.encode(
       _listaTarefas,
@@ -35,6 +46,7 @@ class _HomeState extends State<Home> {
   _lerArquivo() async {
     try {
       final arquivo = await _getFile();
+      return arquivo.readAsString();
     } catch (e) {
       return null;
     }
@@ -52,7 +64,8 @@ class _HomeState extends State<Home> {
   }
 
   Widget build(BuildContext context) {
-    _salvarArquivo();
+    // _salvarArquivo();
+
     return Scaffold(
       appBar: AppBar(
         title: Text("Lista de tarefas", style: TextStyle(color: Colors.white)),
@@ -67,12 +80,19 @@ class _HomeState extends State<Home> {
               return AlertDialog(
                 title: Text("Adicionar tarefa"),
                 content: TextField(
+                  controller: _controllerTarefa,
                   decoration: InputDecoration(labelText: "digite sua tarefa"),
                   onChanged: (text) {},
                 ),
 
                 actions: [
-                  TextButton(onPressed: () {}, child: Text("adicionar")),
+                  TextButton(
+                    onPressed: () {
+                      _salvarTarefa();
+                      Navigator.pop(context);
+                    },
+                    child: Text("adicionar"),
+                  ),
                   TextButton(
                     child: Text("cancelar"),
                     onPressed: () => Navigator.pop(context),
@@ -92,7 +112,18 @@ class _HomeState extends State<Home> {
               child: ListView.builder(
                 itemCount: _listaTarefas.length,
                 itemBuilder: (context, index) {
-                  return ListTile(title: Text(_listaTarefas[index]["titulo"]));
+                  /*  return ListTile(title: Text(_listaTarefas[index]["titulo"]));*/
+
+                  return CheckboxListTile(
+                    title: Text(_listaTarefas[index]["titulo"]),
+                    value: _listaTarefas[index]["realizada"],
+                    onChanged: (valorAlterado) {
+                      setState(() {
+                        _listaTarefas[index]["realizada"] = valorAlterado;
+                      });
+                      _salvarArquivo();
+                    },
+                  );
                 },
               ),
             ),
