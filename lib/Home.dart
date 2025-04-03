@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:convert';
@@ -11,61 +10,119 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   List _listaTarefas = [];
+  Map<String, dynamic> _ultimaRemovida = Map();
 
   TextEditingController _controllerTarefa = TextEditingController();
 
-  _salvarTarefa() {
-    String textoDigitado = _controllerTarefa.text;
-
-    Map<String, dynamic> tarefa = Map();
-
-    tarefa["titulo"] = textoDigitado;
-    tarefa["realizada"] = false;
-    setState(() {
-      _listaTarefas.add(tarefa);
-    });
-
-    _controllerTarefa.text = "";
-    _salvarArquivo();
-  }
-
-  _getFile() async {
+  Future<File> _getFile() async {
     final diretorio = await getApplicationDocumentsDirectory();
     return File("${diretorio.path}/dados.json");
   }
 
-  _salvarArquivo() async {
+  Future<void> _salvarArquivo() async {
     var arquivo = await _getFile();
-
-    String dados = json.encode(
-      _listaTarefas,
-    ); //converte LIST ou MAP em string Json
-    arquivo.writeAsString(dados);
+    String dados = json.encode(_listaTarefas);
+    await arquivo.writeAsString(dados);
   }
 
-  _lerArquivo() async {
+  Future<void> _lerArquivo() async {
     try {
       final arquivo = await _getFile();
-      return arquivo.readAsString();
+      if (await arquivo.exists()) {
+        String dados = await arquivo.readAsString();
+        if (dados.isNotEmpty) {
+          setState(() {
+            _listaTarefas = jsonDecode(dados);
+          });
+        } else {
+          setState(() {
+            _listaTarefas = [];
+          });
+        }
+      } else {
+        setState(() {
+          _listaTarefas = [];
+        });
+      }
     } catch (e) {
-      return null;
+      print("Erro ao ler o arquivo: $e");
+      setState(() {
+        _listaTarefas = [];
+      });
     }
   }
 
   @override
   void initState() {
     super.initState();
+    _lerArquivo();
+  }
 
-    _lerArquivo().then((dados) {
-      setState(() {
-        _listaTarefas = jsonDecode(dados);
-      });
+  _salvarTarefa() {
+    String textoDigitado = _controllerTarefa.text.trim();
+    if (textoDigitado.isEmpty) return;
+
+    Map<String, dynamic> tarefa = {"titulo": textoDigitado, "realizada": false};
+
+    setState(() {
+      _listaTarefas.add(tarefa);
     });
+
+    _controllerTarefa.clear();
+    _salvarArquivo();
+  }
+
+  Widget criaItemLista(context, index) {
+    final item = _listaTarefas[index]["titulo"];
+
+    return Dismissible(
+      direction: DismissDirection.endToStart,
+      onDismissed: (direction) {
+        setState(() {
+          _ultimaRemovida = _listaTarefas[index];
+
+          _listaTarefas.removeAt(index);
+          _salvarArquivo();
+        });
+
+        final snackbar = SnackBar(
+          content: Text("Tarefa removida"),
+          action: SnackBarAction(
+            label: "Desfazer",
+            onPressed: () {
+              setState(() {
+                _listaTarefas.insert(index, _ultimaRemovida);
+              });
+              _salvarArquivo();
+            },
+          ),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(snackbar);
+      },
+      key: ValueKey(DateTime.now().millisecondsSinceEpoch.toString()),
+      background: Container(
+        color: Colors.red,
+        padding: EdgeInsets.all(16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [Icon(Icons.delete, color: Colors.white)],
+        ),
+      ),
+      child: CheckboxListTile(
+        title: Text(_listaTarefas[index]["titulo"]),
+        value: _listaTarefas[index]["realizada"],
+        onChanged: (valorAlterado) {
+          if (valorAlterado == null) return;
+          setState(() {
+            _listaTarefas[index]["realizada"] = valorAlterado;
+          });
+          _salvarArquivo();
+        },
+      ),
+    );
   }
 
   Widget build(BuildContext context) {
-    // _salvarArquivo();
-
     return Scaffold(
       appBar: AppBar(
         title: Text("Lista de tarefas", style: TextStyle(color: Colors.white)),
@@ -81,20 +138,18 @@ class _HomeState extends State<Home> {
                 title: Text("Adicionar tarefa"),
                 content: TextField(
                   controller: _controllerTarefa,
-                  decoration: InputDecoration(labelText: "digite sua tarefa"),
-                  onChanged: (text) {},
+                  decoration: InputDecoration(labelText: "Digite sua tarefa"),
                 ),
-
                 actions: [
                   TextButton(
                     onPressed: () {
                       _salvarTarefa();
                       Navigator.pop(context);
                     },
-                    child: Text("adicionar"),
+                    child: Text("Adicionar"),
                   ),
                   TextButton(
-                    child: Text("cancelar"),
+                    child: Text("Cancelar"),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -111,20 +166,7 @@ class _HomeState extends State<Home> {
             Expanded(
               child: ListView.builder(
                 itemCount: _listaTarefas.length,
-                itemBuilder: (context, index) {
-                  /*  return ListTile(title: Text(_listaTarefas[index]["titulo"]));*/
-
-                  return CheckboxListTile(
-                    title: Text(_listaTarefas[index]["titulo"]),
-                    value: _listaTarefas[index]["realizada"],
-                    onChanged: (valorAlterado) {
-                      setState(() {
-                        _listaTarefas[index]["realizada"] = valorAlterado;
-                      });
-                      _salvarArquivo();
-                    },
-                  );
-                },
+                itemBuilder: criaItemLista,
               ),
             ),
           ],
